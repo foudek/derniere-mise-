@@ -11,9 +11,7 @@ html,body{
   color:white;
   font-family: monospace;
 }
-canvas{
-  display:block;
-}
+canvas{display:block;}
 #ui{
   position:fixed;
   bottom:40px;
@@ -21,10 +19,8 @@ canvas{
   display:flex;
   justify-content:center;
   gap:40px;
-  pointer-events:none;
 }
 button{
-  pointer-events:auto;
   background:none;
   color:white;
   border:1px solid white;
@@ -39,13 +35,10 @@ button:hover{
 </style>
 </head>
 <body>
-
 <canvas id="c"></canvas>
-
 <div id="ui"></div>
 
 <script>
-/* ================= SETUP ================= */
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 const ui = document.getElementById("ui");
@@ -57,174 +50,257 @@ function resize(){
 addEventListener("resize",resize);
 resize();
 
+/* ==================== VARIABLES ==================== */
+
 let t = 0;
 let scene = 0;
 let choice = null;
+let playerCount = 4;
+let lastScene = -1;
 
-/* ================= CAMERA ================= */
-function camera(intensity=1.5){
+/* ==================== UTIL ==================== */
+
+function setScene(n){
+  scene = n;
+  lastScene = -1;
+}
+
+function clearUI(){
+  ui.innerHTML="";
+}
+
+function caption(text){
+  ctx.fillStyle="white";
+  ctx.font="18px monospace";
+  ctx.fillText(text,40,60);
+}
+
+/* ==================== CAMERA ==================== */
+
+function cameraShake(intensity=1){
   ctx.translate(
-    Math.sin(t*0.04)*intensity,
-    Math.cos(t*0.03)*intensity
+    Math.sin(t*0.05)*intensity,
+    Math.cos(t*0.04)*intensity
   );
 }
 
-/* ================= TEXT ================= */
-function caption(txt){
-  ctx.font="18px monospace";
-  ctx.fillStyle="white";
-  ctx.fillText(txt,40,80);
+/* ==================== TABLE ==================== */
+
+function drawTable(){
+  ctx.strokeStyle="white";
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.ellipse(canvas.width/2,canvas.height/1.5,500,200,0,0,Math.PI*2);
+  ctx.stroke();
 }
 
-/* ================= CHARACTERS ================= */
-function face({scar=false,cigar=false,eye=false,zoom=1,shock=false}){
-  const cx = canvas.width/2;
-  const cy = canvas.height/2;
+/* ==================== CARTES ==================== */
 
-  const breath = Math.sin(t*0.03)*2;
+function drawCard(x,y,value,suit){
+  ctx.strokeStyle="white";
+  ctx.lineWidth=1.5;
+  ctx.strokeRect(x,y,80,120);
+  ctx.font="20px monospace";
+  ctx.fillText(value,x+10,y+30);
+  ctx.fillText(suit,x+10,y+60);
+}
 
+function drawHand(){
+  drawCard(canvas.width/2-100,canvas.height-200,"A","♥");
+  drawCard(canvas.width/2+20,canvas.height-200,"K","♠");
+}
+
+/* ==================== PISTOLET ==================== */
+
+function drawGun(x,y,angle=0,scale=1){
   ctx.save();
-  ctx.translate(cx,cy);
-  ctx.scale(zoom + breath*0.002, zoom + breath*0.002);
-  ctx.translate(-cx,-cy);
+  ctx.translate(x,y);
+  ctx.rotate(angle);
+  ctx.scale(scale,scale);
 
   ctx.strokeStyle="white";
-  ctx.lineWidth=1.2;
+  ctx.lineWidth=2;
 
-  // head contour
   ctx.beginPath();
-  ctx.arc(cx,cy,90,0,Math.PI*2);
+  ctx.moveTo(0,0);
+  ctx.lineTo(120,0);
+  ctx.lineTo(120,20);
+  ctx.lineTo(0,20);
+  ctx.closePath();
   ctx.stroke();
 
-  // eye
   ctx.beginPath();
-  ctx.arc(cx-30,cy-10,20,Math.PI*0.1,Math.PI*0.9);
-  ctx.stroke();
-
-  if(eye){
-    ctx.beginPath();
-    ctx.moveTo(cx-50,cy-10);
-    ctx.lineTo(cx-10,cy-10);
-    ctx.stroke();
-  }
-
-  // mouth
-  ctx.beginPath();
-  if(shock){
-    ctx.arc(cx-20,cy+40,10,0,Math.PI*2);
-  }else{
-    ctx.moveTo(cx-40,cy+40);
-    ctx.lineTo(cx,cy+40);
-  }
-  ctx.stroke();
-
-  // scar
-  if(scar){
-    ctx.beginPath();
-    ctx.moveTo(cx+10,cy-30);
-    ctx.lineTo(cx+40,cy+10);
-    ctx.stroke();
-  }
-
-  // cigar
-  if(cigar){
-    ctx.beginPath();
-    ctx.moveTo(cx+10,cy+45);
-    ctx.lineTo(cx+50,cy+50);
-    ctx.stroke();
-  }
-
-  // suit
-  ctx.beginPath();
-  ctx.moveTo(cx-80,cy+90);
-  ctx.lineTo(cx,cy+160);
-  ctx.lineTo(cx+80,cy+90);
+  ctx.moveTo(30,20);
+  ctx.lineTo(60,90);
+  ctx.lineTo(30,90);
+  ctx.closePath();
   ctx.stroke();
 
   ctx.restore();
 }
 
-/* ================= OBJECTS ================= */
-function gun(){
+/* ==================== PERSONNAGES ==================== */
+
+function character(x,y,scale=1,traits={}){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.scale(scale,scale);
   ctx.strokeStyle="white";
-  ctx.lineWidth=2;
+  ctx.lineWidth=1.5;
+
+  // tête
   ctx.beginPath();
-  ctx.arc(canvas.width/2,canvas.height/2,90,0,Math.PI*2);
+  ctx.arc(0,0,40,0,Math.PI*2);
   ctx.stroke();
+
+  // costume
   ctx.beginPath();
-  ctx.arc(canvas.width/2,canvas.height/2,40,0,Math.PI*2);
+  ctx.moveTo(-40,40);
+  ctx.lineTo(0,120);
+  ctx.lineTo(40,40);
   ctx.stroke();
+
+  // cravate
+  ctx.beginPath();
+  ctx.moveTo(0,40);
+  ctx.lineTo(10,80);
+  ctx.lineTo(0,100);
+  ctx.lineTo(-10,80);
+  ctx.closePath();
+  ctx.stroke();
+
+  // yeux
+  ctx.beginPath();
+  ctx.arc(-15,-5,5,0,Math.PI*2);
+  ctx.arc(15,-5,5,0,Math.PI*2);
+  ctx.stroke();
+
+  // réactions
+  if(traits.scar){
+    ctx.beginPath();
+    ctx.moveTo(10,-20);
+    ctx.lineTo(30,10);
+    ctx.stroke();
+  }
+
+  if(traits.monocle){
+    ctx.beginPath();
+    ctx.arc(15,-5,10,0,Math.PI*2);
+    ctx.stroke();
+  }
+
+  if(traits.beard){
+    ctx.beginPath();
+    ctx.arc(0,20,20,0,Math.PI);
+    ctx.stroke();
+  }
+
+  if(traits.shock){
+    ctx.beginPath();
+    ctx.arc(0,20,8,0,Math.PI*2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
 }
 
-/* ================= UI ================= */
-function clearUI(){
-  ui.innerHTML="";
-}
-function buttons(arr){
-  ui.innerHTML="";
-  arr.forEach(b=>{
-    const btn=document.createElement("button");
-    btn.textContent=b.text;
-    btn.onclick=b.action;
-    ui.appendChild(btn);
-  });
-}
+/* ==================== SCÈNES ==================== */
 
-/* ================= SCENES ================= */
 function drawScene(){
   ctx.fillStyle="black";
   ctx.fillRect(0,0,canvas.width,canvas.height);
+
   ctx.save();
-  camera();
+  cameraShake(0.5);
+
+  if(scene !== lastScene){
+    clearUI();
+
+    if(scene === 0){
+      const btn1 = document.createElement("button");
+      btn1.textContent="TIRER";
+      btn1.onclick=()=>{
+        choice="kill";
+        playerCount=3;
+        setScene(1);
+      };
+
+      const btn2 = document.createElement("button");
+      btn2.textContent="DONNER DES JETONS";
+      btn2.onclick=()=>{
+        choice="spare";
+        playerCount=4;
+        setScene(1);
+      };
+
+      ui.appendChild(btn1);
+      ui.appendChild(btn2);
+    }
+
+    lastScene = scene;
+  }
 
   switch(scene){
 
     case 0:
-      caption("TABLE DE POKER. COSTUMES. SILENCE.");
-      face({zoom:1});
-      buttons([
-        {text:"TIRER",action:()=>{choice="kill";scene++;}},
-        {text:"DONNER DES JETONS",action:()=>{choice="spare";scene++;}}
-      ]);
+      drawTable();
+      drawHand();
+      drawGun(canvas.width-250,canvas.height-220,0.2,1);
+      character(canvas.width/2-250,canvas.height/2,1,{scar:true});
+      character(canvas.width/2+250,canvas.height/2,1,{monocle:true});
+      character(canvas.width/2,canvas.height/2-100,1,{beard:true});
+      caption("Le hasard n'existe pas. Seulement les décisions.");
       break;
 
     case 1:
-      clearUI();
-      caption("Il perd la manche.");
-      face({shock:true,zoom:1.15});
+      drawTable();
+      drawHand();
+      caption("Un choix est une fracture dans le réel.");
       break;
 
     case 2:
-      caption(choice==="kill"?"Trois joueurs restants.":"Quatre joueurs. Tension.");
-      face({scar:true});
+      drawTable();
+      if(playerCount===3){
+        character(canvas.width/2-250,canvas.height/2,1.2,{scar:true,shock:true});
+        character(canvas.width/2+250,canvas.height/2,1.2,{monocle:true});
+      }else{
+        character(canvas.width/2-250,canvas.height/2,1.2,{scar:true});
+        character(canvas.width/2+250,canvas.height/2,1.2,{monocle:true});
+        character(canvas.width/2,canvas.height/2-100,1.2,{beard:true});
+      }
+      caption("Les regards se fissurent.");
       break;
 
     case 3:
-      caption("Regard figé.");
-      face({cigar:true,zoom:1.25});
+      drawTable();
+      character(canvas.width/2,canvas.height/2,1.5,{scar:true});
+      caption("Il comprend.");
       break;
 
     case 4:
-      caption("Un œil ne cligne pas.");
-      face({eye:true,zoom:1.35});
+      drawGun(canvas.width/2,canvas.height/2,-1.2,1.5);
+      caption("Le silence devient plus lourd que le plomb.");
       break;
 
     case 5:
-      caption("Silence.");
-      gun();
-      break;
-
-    case 6:
       ctx.fillStyle="white";
       ctx.fillRect(0,0,canvas.width,canvas.height);
-      clearUI();
       break;
   }
 
   ctx.restore();
 }
 
-/* ================= LOOP ================= */
+/* ==================== INPUT ==================== */
+
+canvas.addEventListener("click",()=>{
+  if(scene>0 && scene<5){
+    setScene(scene+1);
+  }
+});
+
+/* ==================== LOOP ==================== */
+
 function loop(){
   drawScene();
   t++;
@@ -232,13 +308,6 @@ function loop(){
 }
 loop();
 
-/* ================= INPUT ================= */
-canvas.addEventListener("click",()=>{
-  if(scene>0 && scene<6){
-    scene++;
-  }
-});
 </script>
-
 </body>
 </html>
