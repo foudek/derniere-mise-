@@ -17,37 +17,81 @@ canvas{display:block;}
   bottom:30px;
   width:100%;
   text-align:center;
+  pointer-events:none;
 }
 </style>
 </head>
 <body>
 
 <canvas id="c"></canvas>
+<div id="ui"></div>
 
-<!-- VISAGE MAFIEUX SVG (ULTRA IMPORTANT) -->
-<svg id="mafieux" viewBox="0 0 400 600" style="display:none">
-  <path d="M200 40 C120 40 80 120 90 200 C100 300 140 360 200 380 C260 360 300 300 310 200 C320 120 280 40 200 40"
-        fill="none" stroke="white" stroke-width="3"/>
+<!-- ================= SVG ASSETS (DESSINS BD) ================= -->
+
+<!-- TABLE -->
+<svg id="svg-table" viewBox="0 0 800 400" style="display:none">
+  <ellipse cx="400" cy="200" rx="360" ry="160" fill="none" stroke="white" stroke-width="6"/>
+</svg>
+
+<!-- CARTE -->
+<svg id="svg-card" viewBox="0 0 100 140" style="display:none">
+  <rect x="5" y="5" width="90" height="130" rx="8" fill="none" stroke="white" stroke-width="4"/>
+  <text x="15" y="30" font-size="22" fill="white">Q</text>
+  <text x="15" y="55" font-size="22" fill="white">♥</text>
+</svg>
+
+<!-- MAIN (VUE PREMIÈRE PERSONNE) -->
+<svg id="svg-hand" viewBox="0 0 300 300" style="display:none">
+  <path d="M150 60
+           C110 80 90 130 95 180
+           C100 230 130 260 160 260
+           C200 255 220 220 215 180
+           C210 140 190 90 150 60Z"
+        fill="none" stroke="white" stroke-width="5"/>
+  <!-- doigts -->
+  <path d="M110 80 L90 40" stroke="white" stroke-width="4"/>
+  <path d="M140 70 L130 30" stroke="white" stroke-width="4"/>
+  <path d="M170 70 L180 30" stroke="white" stroke-width="4"/>
+  <path d="M200 80 L230 50" stroke="white" stroke-width="4"/>
+</svg>
+
+<!-- PISTOLET RÉALISTE -->
+<svg id="svg-gun" viewBox="0 0 500 200" style="display:none">
+  <rect x="40" y="70" width="320" height="40" fill="none" stroke="white" stroke-width="6"/>
+  <rect x="120" y="40" width="180" height="30" fill="none" stroke="white" stroke-width="6"/>
+  <path d="M200 110 L240 190 L180 190 Z" fill="none" stroke="white" stroke-width="6"/>
+  <circle cx="230" cy="120" r="12" fill="none" stroke="white" stroke-width="4"/>
+</svg>
+
+<!-- VISAGE MAFIEUX -->
+<svg id="svg-face" viewBox="0 0 400 500" style="display:none">
+  <path d="M200 40
+           C120 50 90 150 100 260
+           C110 360 150 430 200 450
+           C250 430 290 360 300 260
+           C310 150 280 50 200 40Z"
+        fill="none" stroke="white" stroke-width="6"/>
 
   <!-- yeux -->
-  <path d="M130 190 Q160 180 190 190" fill="none" stroke="white" stroke-width="2"/>
-  <path d="M210 190 Q240 180 270 190" fill="none" stroke="white" stroke-width="2"/>
-  <circle cx="160" cy="195" r="4" fill="white"/>
-  <circle cx="240" cy="195" r="4" fill="white"/>
+  <path d="M120 200 Q160 190 200 200" stroke="white" stroke-width="4" fill="none"/>
+  <path d="M200 200 Q240 190 280 200" stroke="white" stroke-width="4" fill="none"/>
+  <circle cx="160" cy="205" r="6" fill="white"/>
+  <circle cx="240" cy="205" r="6" fill="white"/>
 
   <!-- nez -->
-  <path d="M200 200 C190 240 185 260 200 270 C215 260 210 240 200 200"
-        fill="none" stroke="white" stroke-width="2"/>
+  <path d="M200 210 C185 260 180 280 200 290 C220 280 215 260 200 210"
+        fill="none" stroke="white" stroke-width="4"/>
 
   <!-- bouche -->
-  <path d="M160 300 Q200 315 240 300" fill="none" stroke="white" stroke-width="2"/>
+  <path d="M160 330 Q200 350 240 330" fill="none" stroke="white" stroke-width="4"/>
 
   <!-- barbe -->
-  <path d="M120 280 C130 350 160 390 200 400 C240 390 270 350 280 280"
-        fill="none" stroke="white" stroke-width="2"/>
+  <path d="M130 300 C140 380 180 430 200 440
+           C220 430 260 380 270 300"
+        fill="none" stroke="white" stroke-width="4"/>
 
   <!-- cicatrice -->
-  <path d="M250 140 L290 180" stroke="white" stroke-width="2"/>
+  <path d="M260 150 L300 210" stroke="white" stroke-width="4"/>
 </svg>
 
 <script>
@@ -61,14 +105,14 @@ function resize(){
 addEventListener("resize",resize);
 resize();
 
-/* ================= CAMÉRA CINÉ ================= */
+/* ================= CAMÉRA ================= */
 
-let cam = { x:0, y:0, z:1, tx:0, ty:0, tz:1 };
+let cam = { x:0,y:0,z:1, tx:0,ty:0,tz:1 };
 
 function updateCam(){
-  cam.x += (cam.tx - cam.x)*0.05;
-  cam.y += (cam.ty - cam.y)*0.05;
-  cam.z += (cam.tz - cam.z)*0.05;
+  cam.x += (cam.tx-cam.x)*0.06;
+  cam.y += (cam.ty-cam.y)*0.06;
+  cam.z += (cam.tz-cam.z)*0.06;
 }
 
 function applyCam(){
@@ -77,36 +121,43 @@ function applyCam(){
   ctx.translate(-canvas.width/2+cam.x,-canvas.height/2+cam.y);
 }
 
-/* ================= SCÉNARIO 50+ PLANS ================= */
+/* ================= UTIL SVG ================= */
 
-const script = [];
-for(let i=0;i<55;i++){
-  script.push({
-    text: [
-      "Le silence pèse.",
-      "Chaque regard est un calcul.",
-      "Les cartes n'ont pas de morale.",
-      "On gagne toujours quelque chose.",
-      "Même quand on perd.",
-      "Personne ne sort indemne."
-    ][i%6],
-    zoom: 1 + i*0.01,
-    x: Math.sin(i)*30,
-    y: Math.cos(i)*20
+function drawSVG(id,x,y,w,h){
+  const svg=document.getElementById(id);
+  const img=new Image();
+  const xml=new XMLSerializer().serializeToString(svg);
+  img.src="data:image/svg+xml;base64,"+btoa(xml);
+  ctx.drawImage(img,x,y,w,h);
+}
+
+/* ================= SCÉNARIO (50+ PLANS) ================= */
+
+const story = [];
+for(let i=0;i<52;i++){
+  story.push({
+    cam:{
+      z:1+Math.sin(i*0.3)*0.2 + i*0.005,
+      x:Math.cos(i*0.5)*40,
+      y:Math.sin(i*0.4)*30
+    }
   });
 }
 
-let scene = 0;
+// textes clés seulement
+const texts={
+  0:"La table décide qui parle.",
+  6:"Personne ne joue pour perdre.",
+  12:"Certains regards valent une menace.",
+  18:"Les morts n'ont pas besoin de cartes.",
+  26:"Il reste moins d'hommes que de balles.",
+  34:"On croit toujours être différent.",
+  42:"Le dernier gagnant n'est jamais innocent."
+};
 
-/* ================= DRAW ================= */
+/* ================= SCÈNES ================= */
 
-function drawFace(){
-  const svg = document.getElementById("mafieux");
-  const img = new Image();
-  const xml = new XMLSerializer().serializeToString(svg);
-  img.src = "data:image/svg+xml;base64," + btoa(xml);
-  ctx.drawImage(img,canvas.width/2-200,canvas.height/2-300,400,600);
-}
+let scene=0;
 
 function draw(){
   ctx.fillStyle="black";
@@ -116,23 +167,56 @@ function draw(){
   ctx.save();
   applyCam();
 
-  drawFace();
+  // table
+  drawSVG("svg-table",canvas.width/2-400,canvas.height/2-50,800,400);
+
+  // adversaires
+  if(scene<40){
+    drawSVG("svg-face",canvas.width/2-600,canvas.height/2-350,300,400);
+    drawSVG("svg-face",canvas.width/2-150,canvas.height/2-380,300,420);
+    drawSVG("svg-face",canvas.width/2+300,canvas.height/2-350,300,400);
+  }
+
+  // nos mains + cartes
+  drawSVG("svg-hand",canvas.width/2-350,canvas.height-350,300,300);
+  drawSVG("svg-card",canvas.width/2-200,canvas.height-300,100,140);
+  drawSVG("svg-card",canvas.width/2-80,canvas.height-300,100,140);
+
+  // pistolet sur table
+  if(scene<45){
+    drawSVG("svg-gun",canvas.width/2-200,canvas.height/2+80,400,160);
+  }
+
+  // fin : pistolet pointé
+  if(scene>=45 && scene<51){
+    drawSVG("svg-gun",canvas.width/2-100,canvas.height/2-50,500,200);
+  }
 
   ctx.restore();
 
-  ctx.fillStyle="white";
-  ctx.font="18px monospace";
-  ctx.fillText(script[scene].text,40,60);
+  if(texts[scene]){
+    ctx.fillStyle="white";
+    ctx.font="18px monospace";
+    ctx.fillText(texts[scene],40,60);
+  }
+
+  if(scene===51){
+    ctx.fillStyle="white";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle="black";
+    ctx.font="24px monospace";
+    ctx.fillText("Gagner n'efface jamais ce que l'on devient.",40,80);
+  }
 }
 
 /* ================= INPUT ================= */
 
 canvas.addEventListener("click",()=>{
   scene++;
-  if(scene>=script.length) scene=script.length-1;
-  cam.tz = script[scene].zoom;
-  cam.tx = script[scene].x;
-  cam.ty = script[scene].y;
+  if(scene>=story.length) scene=story.length-1;
+  cam.tz=story[scene].cam.z;
+  cam.tx=story[scene].cam.x;
+  cam.ty=story[scene].cam.y;
 });
 
 /* ================= LOOP ================= */
@@ -143,6 +227,5 @@ function loop(){
 }
 loop();
 </script>
-
 </body>
 </html>
