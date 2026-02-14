@@ -39,6 +39,9 @@ button:hover{
 <div id="ui"></div>
 
 <script>
+
+/* ================== SETUP ================== */
+
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 const ui = document.getElementById("ui");
@@ -50,239 +53,270 @@ function resize(){
 addEventListener("resize",resize);
 resize();
 
-/* ==================== VARIABLES ==================== */
+/* ================== VARIABLES ================== */
 
 let t = 0;
 let scene = 0;
 let choice = null;
-let playerCount = 4;
+let playersAlive = 4;
 let lastScene = -1;
 
-/* ==================== UTIL ==================== */
+/* ================== UTIL ================== */
 
 function setScene(n){
   scene = n;
   lastScene = -1;
 }
 
-function clearUI(){
-  ui.innerHTML="";
-}
+function clearUI(){ ui.innerHTML=""; }
 
-function caption(text){
-  ctx.fillStyle="white";
+function caption(txt){
   ctx.font="18px monospace";
-  ctx.fillText(text,40,60);
+  ctx.fillStyle="white";
+  ctx.fillText(txt,40,60);
 }
 
-/* ==================== CAMERA ==================== */
+/* ================== CAMERA ================== */
 
-function cameraShake(intensity=1){
+function camera(intensity=0.3){
   ctx.translate(
-    Math.sin(t*0.05)*intensity,
-    Math.cos(t*0.04)*intensity
+    Math.sin(t*0.02)*intensity,
+    Math.cos(t*0.018)*intensity
   );
 }
 
-/* ==================== TABLE ==================== */
+/* ================== TABLE DÉTAILLÉE ================== */
 
 function drawTable(){
-  ctx.strokeStyle="white";
   ctx.lineWidth=2;
+  ctx.strokeStyle="white";
+
   ctx.beginPath();
-  ctx.ellipse(canvas.width/2,canvas.height/1.5,500,200,0,0,Math.PI*2);
+  ctx.ellipse(canvas.width/2,canvas.height/1.5,600,260,0,0,Math.PI*2);
   ctx.stroke();
+
+  // texture trait croisé
+  for(let i=0;i<40;i++){
+    ctx.beginPath();
+    ctx.moveTo(canvas.width/2-500+i*25,canvas.height/1.5-200);
+    ctx.lineTo(canvas.width/2-450+i*25,canvas.height/1.5+200);
+    ctx.stroke();
+  }
 }
 
-/* ==================== CARTES ==================== */
+/* ================== CARTES ================== */
 
-function drawCard(x,y,value,suit){
-  ctx.strokeStyle="white";
+function drawCard(x,y,val,suit){
   ctx.lineWidth=1.5;
-  ctx.strokeRect(x,y,80,120);
+  ctx.strokeRect(x,y,90,130);
+
   ctx.font="20px monospace";
-  ctx.fillText(value,x+10,y+30);
+  ctx.fillText(val,x+10,y+30);
   ctx.fillText(suit,x+10,y+60);
 }
 
-function drawHand(){
-  drawCard(canvas.width/2-100,canvas.height-200,"A","♥");
-  drawCard(canvas.width/2+20,canvas.height-200,"K","♠");
+function drawCommunityCards(){
+  let startX = canvas.width/2 - 250;
+  drawCard(startX,canvas.height/2+50,"Q","♥");
+  drawCard(startX+110,canvas.height/2+50,"Q","♠");
+  drawCard(startX+220,canvas.height/2+50,"7","♦");
+  drawCard(startX+330,canvas.height/2+50,"A","♣");
+  drawCard(startX+440,canvas.height/2+50,"2","♥");
 }
 
-/* ==================== PISTOLET ==================== */
+function drawPlayerHand(){
+  drawCard(canvas.width/2-120,canvas.height-220,"Q","♦");
+  drawCard(canvas.width/2+10,canvas.height-220,"Q","♣");
+}
+
+/* ================== PISTOLET RÉALISTE ================== */
 
 function drawGun(x,y,angle=0,scale=1){
   ctx.save();
   ctx.translate(x,y);
   ctx.rotate(angle);
   ctx.scale(scale,scale);
-
-  ctx.strokeStyle="white";
   ctx.lineWidth=2;
 
+  // canon
+  ctx.strokeRect(0,-10,180,20);
+
+  // culasse
+  ctx.strokeRect(-20,-20,140,20);
+
+  // poignée
   ctx.beginPath();
-  ctx.moveTo(0,0);
-  ctx.lineTo(120,0);
-  ctx.lineTo(120,20);
-  ctx.lineTo(0,20);
+  ctx.moveTo(40,20);
+  ctx.lineTo(70,110);
+  ctx.lineTo(30,110);
   ctx.closePath();
   ctx.stroke();
 
+  // détente
   ctx.beginPath();
-  ctx.moveTo(30,20);
-  ctx.lineTo(60,90);
-  ctx.lineTo(30,90);
-  ctx.closePath();
+  ctx.arc(60,40,15,0,Math.PI);
   ctx.stroke();
 
   ctx.restore();
 }
 
-/* ==================== PERSONNAGES ==================== */
+/* ================== VISAGE RÉALISTE TRAIT ================== */
 
-function character(x,y,scale=1,traits={}){
+function drawFace(x,y,scale,traits={}){
   ctx.save();
   ctx.translate(x,y);
   ctx.scale(scale,scale);
-  ctx.strokeStyle="white";
   ctx.lineWidth=1.5;
 
   // tête
   ctx.beginPath();
-  ctx.arc(0,0,40,0,Math.PI*2);
+  ctx.ellipse(0,0,50,65,0,0,Math.PI*2);
   ctx.stroke();
 
-  // costume
+  // axe symétrie léger
   ctx.beginPath();
-  ctx.moveTo(-40,40);
-  ctx.lineTo(0,120);
-  ctx.lineTo(40,40);
-  ctx.stroke();
-
-  // cravate
-  ctx.beginPath();
-  ctx.moveTo(0,40);
-  ctx.lineTo(10,80);
-  ctx.lineTo(0,100);
-  ctx.lineTo(-10,80);
-  ctx.closePath();
+  ctx.moveTo(0,-60);
+  ctx.lineTo(0,60);
   ctx.stroke();
 
   // yeux
   ctx.beginPath();
-  ctx.arc(-15,-5,5,0,Math.PI*2);
-  ctx.arc(15,-5,5,0,Math.PI*2);
+  ctx.ellipse(-18,-10,12,6,0,0,Math.PI*2);
+  ctx.ellipse(18,-10,12,6,0,0,Math.PI*2);
   ctx.stroke();
 
-  // réactions
+  // pupilles
+  ctx.beginPath();
+  ctx.arc(-18,-10,3,0,Math.PI*2);
+  ctx.arc(18,-10,3,0,Math.PI*2);
+  ctx.fill();
+
+  // nez
+  ctx.beginPath();
+  ctx.moveTo(0,-5);
+  ctx.lineTo(-5,15);
+  ctx.lineTo(5,15);
+  ctx.stroke();
+
+  // bouche
+  ctx.beginPath();
+  ctx.moveTo(-15,30);
+  ctx.lineTo(15,30);
+  ctx.stroke();
+
+  // costume
+  ctx.beginPath();
+  ctx.moveTo(-50,65);
+  ctx.lineTo(0,160);
+  ctx.lineTo(50,65);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(0,65);
+  ctx.lineTo(0,140);
+  ctx.stroke();
+
   if(traits.scar){
     ctx.beginPath();
-    ctx.moveTo(10,-20);
-    ctx.lineTo(30,10);
-    ctx.stroke();
-  }
-
-  if(traits.monocle){
-    ctx.beginPath();
-    ctx.arc(15,-5,10,0,Math.PI*2);
+    ctx.moveTo(20,-30);
+    ctx.lineTo(40,20);
     ctx.stroke();
   }
 
   if(traits.beard){
     ctx.beginPath();
-    ctx.arc(0,20,20,0,Math.PI);
+    ctx.arc(0,35,25,0,Math.PI);
     ctx.stroke();
   }
 
-  if(traits.shock){
+  if(traits.tension){
     ctx.beginPath();
-    ctx.arc(0,20,8,0,Math.PI*2);
+    ctx.moveTo(-25,-25);
+    ctx.lineTo(-10,-30);
+    ctx.moveTo(25,-25);
+    ctx.lineTo(10,-30);
     ctx.stroke();
   }
 
   ctx.restore();
 }
 
-/* ==================== SCÈNES ==================== */
+/* ================== SCÉNARIO LONG ================== */
 
 function drawScene(){
   ctx.fillStyle="black";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
   ctx.save();
-  cameraShake(0.5);
+  camera();
 
-  if(scene !== lastScene){
+  if(scene!==lastScene){
     clearUI();
 
-    if(scene === 0){
-      const btn1 = document.createElement("button");
-      btn1.textContent="TIRER";
-      btn1.onclick=()=>{
-        choice="kill";
-        playerCount=3;
-        setScene(1);
-      };
+    if(scene===2){
+      let b1=document.createElement("button");
+      b1.textContent="TIRER";
+      b1.onclick=()=>{ choice="kill"; playersAlive=3; setScene(3); };
 
-      const btn2 = document.createElement("button");
-      btn2.textContent="DONNER DES JETONS";
-      btn2.onclick=()=>{
-        choice="spare";
-        playerCount=4;
-        setScene(1);
-      };
+      let b2=document.createElement("button");
+      b2.textContent="DONNER DES JETONS";
+      b2.onclick=()=>{ choice="spare"; playersAlive=4; setScene(3); };
 
-      ui.appendChild(btn1);
-      ui.appendChild(btn2);
+      ui.appendChild(b1);
+      ui.appendChild(b2);
     }
 
-    lastScene = scene;
+    lastScene=scene;
   }
 
   switch(scene){
 
     case 0:
       drawTable();
-      drawHand();
-      drawGun(canvas.width-250,canvas.height-220,0.2,1);
-      character(canvas.width/2-250,canvas.height/2,1,{scar:true});
-      character(canvas.width/2+250,canvas.height/2,1,{monocle:true});
-      character(canvas.width/2,canvas.height/2-100,1,{beard:true});
-      caption("Le hasard n'existe pas. Seulement les décisions.");
+      drawPlayerHand();
+      drawCommunityCards();
+      drawGun(canvas.width-300,canvas.height-200,0.15,1);
+      caption("Tout commence par une table.");
       break;
 
     case 1:
       drawTable();
-      drawHand();
-      caption("Un choix est une fracture dans le réel.");
+      caption("Les cartes mentent moins que les hommes.");
       break;
 
     case 2:
       drawTable();
-      if(playerCount===3){
-        character(canvas.width/2-250,canvas.height/2,1.2,{scar:true,shock:true});
-        character(canvas.width/2+250,canvas.height/2,1.2,{monocle:true});
-      }else{
-        character(canvas.width/2-250,canvas.height/2,1.2,{scar:true});
-        character(canvas.width/2+250,canvas.height/2,1.2,{monocle:true});
-        character(canvas.width/2,canvas.height/2-100,1.2,{beard:true});
-      }
-      caption("Les regards se fissurent.");
+      caption("Que vaut une vie face à une victoire ?");
       break;
 
     case 3:
       drawTable();
-      character(canvas.width/2,canvas.height/2,1.5,{scar:true});
-      caption("Il comprend.");
+      drawFace(canvas.width/2-400,canvas.height/2,1,{scar:true,tension:true});
+      drawFace(canvas.width/2+400,canvas.height/2,1,{beard:true});
+      caption("Le silence avale la pièce.");
       break;
 
     case 4:
-      drawGun(canvas.width/2,canvas.height/2,-1.2,1.5);
-      caption("Le silence devient plus lourd que le plomb.");
+      drawFace(canvas.width/2,canvas.height/2,2,{scar:true,tension:true});
+      caption("Dans ses yeux : le calcul.");
       break;
 
     case 5:
+      drawGun(canvas.width/2,canvas.height/2, -1.4, 2);
+      caption("Le métal ne tremble pas.");
+      break;
+
+    case 6:
+      drawFace(canvas.width/2,canvas.height/2,2,{beard:true});
+      caption("Il reste toujours un témoin.");
+      break;
+
+    case 7:
+      drawGun(canvas.width/2-200,canvas.height/2,-0.2,1.5);
+      caption("Celui qui survit porte le poids.");
+      break;
+
+    case 8:
       ctx.fillStyle="white";
       ctx.fillRect(0,0,canvas.width,canvas.height);
       break;
@@ -291,15 +325,15 @@ function drawScene(){
   ctx.restore();
 }
 
-/* ==================== INPUT ==================== */
+/* ================== INPUT ================== */
 
 canvas.addEventListener("click",()=>{
-  if(scene>0 && scene<5){
+  if(scene!==2 && scene<8){
     setScene(scene+1);
   }
 });
 
-/* ==================== LOOP ==================== */
+/* ================== LOOP ================== */
 
 function loop(){
   drawScene();
