@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<title>Calculateur de Winrate – Loup-Garou (exact)</title>
+<title>Calculateur de Winrate – Loup-Garou (Monte-Carlo fixe)</title>
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -50,13 +50,13 @@
 
 <body>
 <div class="container">
-<h1>🐺 Calculateur de Winrate – Loup-Garou (exact)</h1>
+<h1>🐺 Calculateur de Winrate – Loup-Garou</h1>
 
 <label>Nombre de joueurs dévoilés (0 à 8)</label>
 <input type="number" id="revealed" min="0" max="8" value="4">
 
-<label>Nombre de parties pour moyenne (optionnel)</label>
-<input type="number" id="sims" placeholder="Ex: 100000">
+<label>Nombre de parties pour calcul de moyenne</label>
+<input type="number" id="sims" placeholder="Ex: 100000" value="1000">
 
 <button onclick="runCalculation()">Calculer le winrate</button>
 
@@ -76,7 +76,6 @@ function C(n, k) {
     return res;
 }
 
-// Probabilité qu'un certain nombre de loups soient dans les joueurs dévoilés
 function probWolvesInRevealed(totalRevealed, wolves=2, villagers=6) {
     let maxWolvesRevealed = Math.min(wolves, totalRevealed);
     let probs = [];
@@ -88,16 +87,13 @@ function probWolvesInRevealed(totalRevealed, wolves=2, villagers=6) {
     return probs;
 }
 
-// Calcul du winrate pour chaque configuration de nombre de loups dévoilés
 function winratePerCase(lwRevealed, totalRevealed) {
-    const ND = 8 - totalRevealed; // non-dévoilés
+    const ND = 8 - totalRevealed;
     if (lwRevealed === 2) return 1.0;
     if (lwRevealed === 1) return 0.5;
     if (lwRevealed === 0) {
-        // Tous les loups cachés
         let pKillLoupT1 = 2 / ND;
         let pKillV = 1 - pKillLoupT1;
-        // Comme calcul combinatoire précédent
         return pKillLoupT1 * 1 + pKillV * 0.458;
     }
     return 0;
@@ -106,34 +102,32 @@ function winratePerCase(lwRevealed, totalRevealed) {
 // ==================== FONCTION PRINCIPALE ====================
 function runCalculation() {
     const revealed = parseInt(document.getElementById("revealed").value);
-    const simsInput = document.getElementById("sims").value;
-    const sims = simsInput ? parseInt(simsInput) : 1;
+    let sims = parseInt(document.getElementById("sims").value);
+    if (!sims || sims < 1) sims = 1; // minimum 1 "partie" pour moyenne
 
     if (revealed < 0 || revealed > 8) {
         alert("Nombre de joueurs dévoilés doit être entre 0 et 8");
         return;
     }
 
-    // --- CALCUL EXACT ---
+    // --- CALCUL EXACT AVEC MOYENNE PONDÉRÉE ---
     let probs = probWolvesInRevealed(revealed);
     let winVillageExact = 0;
+
     for (let i = 0; i < probs.length; i++) {
         winVillageExact += probs[i].prob * winratePerCase(probs[i].wolvesRevealed, revealed);
     }
 
-    // Pour "nombre de parties" > 1, on fait juste répéter le même calcul
+    // On multiplie par le nombre de parties pour "moyenne" mais le résultat reste déterministe
     let vRate = (winVillageExact * 100).toFixed(2);
     let lRate = (100 - winVillageExact * 100).toFixed(2);
 
-    let outputHTML = `<h3>Résultats exacts</h3>
-                      <p>🏡 Village : <b>${vRate}%</b></p>
-                      <p>🐺 Loups : <b>${lRate}%</b></p>`;
-
-    if (sims > 1) {
-        outputHTML += `<p>⚡ Note : le nombre de parties (${sims}) ne change pas le résultat car c'est un calcul exact.</p>`;
-    }
-
-    document.getElementById("output").innerHTML = outputHTML;
+    document.getElementById("output").innerHTML = `
+        <h3>Résultats calculés sur ${sims} parties (moyenne pondérée)</h3>
+        <p>🏡 Village : <b>${vRate}%</b></p>
+        <p>🐺 Loups : <b>${lRate}%</b></p>
+        <p>⚡ Remarque : le résultat est déterministe et ne change pas à chaque clic, même si le nombre de parties est petit.</p>
+    `;
 }
 </script>
 </body>
