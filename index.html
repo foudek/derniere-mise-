@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<title>Calculateur de Winrate – Loup-Garou (exact + simulation)</title>
+<title>Calculateur de Winrate – Loup-Garou (exact)</title>
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -50,12 +50,12 @@
 
 <body>
 <div class="container">
-<h1>🐺 Calculateur de Winrate – Loup-Garou</h1>
+<h1>🐺 Calculateur de Winrate – Loup-Garou (exact)</h1>
 
 <label>Nombre de joueurs dévoilés (0 à 8)</label>
 <input type="number" id="revealed" min="0" max="8" value="4">
 
-<label>Nombre de parties pour simulation (laisser vide pour seulement calcul exact)</label>
+<label>Nombre de parties pour moyenne (optionnel)</label>
 <input type="number" id="sims" placeholder="Ex: 100000">
 
 <button onclick="runCalculation()">Calculer le winrate</button>
@@ -76,6 +76,7 @@ function C(n, k) {
     return res;
 }
 
+// Probabilité qu'un certain nombre de loups soient dans les joueurs dévoilés
 function probWolvesInRevealed(totalRevealed, wolves=2, villagers=6) {
     let maxWolvesRevealed = Math.min(wolves, totalRevealed);
     let probs = [];
@@ -87,71 +88,26 @@ function probWolvesInRevealed(totalRevealed, wolves=2, villagers=6) {
     return probs;
 }
 
+// Calcul du winrate pour chaque configuration de nombre de loups dévoilés
 function winratePerCase(lwRevealed, totalRevealed) {
     const ND = 8 - totalRevealed; // non-dévoilés
     if (lwRevealed === 2) return 1.0;
     if (lwRevealed === 1) return 0.5;
     if (lwRevealed === 0) {
+        // Tous les loups cachés
         let pKillLoupT1 = 2 / ND;
         let pKillV = 1 - pKillLoupT1;
+        // Comme calcul combinatoire précédent
         return pKillLoupT1 * 1 + pKillV * 0.458;
     }
     return 0;
-}
-
-// ==================== SIMULATION MONTE-CARLO ====================
-function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-}
-
-function simulateGame(revealedCount) {
-    let players = [];
-    for (let i = 0; i < 2; i++) players.push({ role: "L", alive: true, revealed: false });
-    for (let i = 0; i < 6; i++) players.push({ role: "V", alive: true, revealed: false });
-
-    shuffle(players);
-
-    let indices = [...Array(8).keys()];
-    shuffle(indices);
-    for (let i = 0; i < revealedCount; i++) {
-        players[indices[i]].revealed = true;
-    }
-
-    for (let turn = 1; turn <= 3; turn++) {
-        // JOUR
-        let revealedWolves = players.filter(p => p.alive && p.revealed && p.role === "L");
-        if (revealedWolves.length > 0) {
-            revealedWolves[0].alive = false;
-        } else {
-            let candidates = players.filter(p => p.alive && !p.revealed);
-            if (candidates.length > 0) {
-                candidates[Math.floor(Math.random() * candidates.length)].alive = false;
-            }
-        }
-
-        if (players.filter(p => p.alive && p.role === "L").length === 0) return "V";
-
-        // NUIT
-        let nightTargets = players.filter(p => p.alive && p.role === "V" && p.revealed);
-        if (nightTargets.length === 0) nightTargets = players.filter(p => p.alive && p.role === "V");
-        if (nightTargets.length > 0) nightTargets[Math.floor(Math.random() * nightTargets.length)].alive = false;
-
-        let wolves = players.filter(p => p.alive && p.role === "L").length;
-        let villagers = players.filter(p => p.alive && p.role === "V").length;
-        if (wolves >= villagers) return "L";
-    }
-
-    return "L";
 }
 
 // ==================== FONCTION PRINCIPALE ====================
 function runCalculation() {
     const revealed = parseInt(document.getElementById("revealed").value);
     const simsInput = document.getElementById("sims").value;
-    const sims = simsInput ? parseInt(simsInput) : 0;
+    const sims = simsInput ? parseInt(simsInput) : 1;
 
     if (revealed < 0 || revealed > 8) {
         alert("Nombre de joueurs dévoilés doit être entre 0 et 8");
@@ -164,28 +120,17 @@ function runCalculation() {
     for (let i = 0; i < probs.length; i++) {
         winVillageExact += probs[i].prob * winratePerCase(probs[i].wolvesRevealed, revealed);
     }
-    let vExact = (winVillageExact * 100).toFixed(2);
-    let lExact = (100 - winVillageExact * 100).toFixed(2);
 
-    let outputHTML = `<h3>Résultats exacts (calcul combinatoire)</h3>
-                      <p>🏡 Village : <b>${vExact}%</b></p>
-                      <p>🐺 Loups : <b>${lExact}%</b></p>`;
+    // Pour "nombre de parties" > 1, on fait juste répéter le même calcul
+    let vRate = (winVillageExact * 100).toFixed(2);
+    let lRate = (100 - winVillageExact * 100).toFixed(2);
 
-    // --- SIMULATION MONTE-CARLO ---
-    if (sims > 0) {
-        let villageWins = 0;
-        let wolfWins = 0;
-        for (let i = 0; i < sims; i++) {
-            let result = simulateGame(revealed);
-            if (result === "V") villageWins++;
-            else wolfWins++;
-        }
-        let vSim = ((villageWins / sims) * 100).toFixed(2);
-        let lSim = ((wolfWins / sims) * 100).toFixed(2);
+    let outputHTML = `<h3>Résultats exacts</h3>
+                      <p>🏡 Village : <b>${vRate}%</b></p>
+                      <p>🐺 Loups : <b>${lRate}%</b></p>`;
 
-        outputHTML += `<h3>Résultats simulation (${sims} parties)</h3>
-                       <p>🏡 Village : <b>${vSim}%</b></p>
-                       <p>🐺 Loups : <b>${lSim}%</b></p>`;
+    if (sims > 1) {
+        outputHTML += `<p>⚡ Note : le nombre de parties (${sims}) ne change pas le résultat car c'est un calcul exact.</p>`;
     }
 
     document.getElementById("output").innerHTML = outputHTML;
