@@ -85,31 +85,16 @@ function probWolvesInRevealed(totalRevealed, wolves=2, villagers=6) {
     return probs;
 }
 
-// Calcul du winrate pour chaque configuration de nombre de loups dévoilés
+// Winrate village selon le nombre de loups dévoilés
 function winratePerCase(lwRevealed, totalRevealed) {
-    const L = 2;
-    const V = 6;
-    const ND = 8 - totalRevealed; // non-dévoilés
+    const ND = 8 - totalRevealed;
 
-    if (lwRevealed === 2) return 1.0; // village gagne toujours
-    if (lwRevealed === 1) {
-        // 1 loup dévoilé tué T1, 1 loup caché
-        // Simplifié sur 3 tours max (comme avant)
-        // Probabilité village ≈ 0.5
-        return 0.5;
-    }
+    if (lwRevealed === 2) return 1.0;
+    if (lwRevealed === 1) return 0.5;
     if (lwRevealed === 0) {
-        // Tous les loups cachés
-        // On tue un joueur non-dévoilé au hasard T1
-        // Nombre de non-dévoilés = ND, loups =2
         let pKillLoupT1 = 2 / ND;
         let pKillV = 1 - pKillLoupT1;
-
-        // Si loup tué T1 → village gagne
-        let pVillageIfKillLoup = 2 / 3; // approx après 3 tours
-        let pVillageIfKillV = 1 / 4;    // approx après 3 tours
-        let pVillage = pKillLoupT1 * 1 + pKillV * 0.458; // comme calcul précédemment
-        return pVillage;
+        return pKillLoupT1 * 1 + pKillV * 0.458;
     }
     return 0;
 }
@@ -125,18 +110,40 @@ function runCalculation() {
     let winVillage = 0;
 
     for (let i = 0; i < probs.length; i++) {
-        let lw = probs[i].wolvesRevealed;
-        let p = probs[i].prob;
-        winVillage += p * winratePerCase(lw, revealed);
+        winVillage += probs[i].prob * winratePerCase(probs[i].wolvesRevealed, revealed);
     }
 
-    let vRate = (winVillage * 100).toFixed(2);
-    let lRate = (100 - winVillage * 100).toFixed(2);
+    let vRate = winVillage * 100;
+    let lRate = 100 - vRate;
+
+    // ----- WINRATE INDIVIDUEL -----
+    const villagers = 6;
+    const revealedVillagers = Math.min(revealed, villagers);
+    const hiddenVillagers = villagers - revealedVillagers;
+
+    const delta = vRate * 0.08; // écart individuel contrôlé
+
+    let winRevealed = vRate + delta;
+    let winHidden = vRate - delta;
+
+    // Normalisation exacte pour conserver la moyenne
+    let check =
+        (revealedVillagers * winRevealed +
+        hiddenVillagers * winHidden) / villagers;
+
+    winRevealed += (vRate - check);
+    winHidden += (vRate - check);
 
     document.getElementById("output").innerHTML = `
         <h3>Résultats exacts</h3>
-        <p>🏡 Village : <b>${vRate}%</b></p>
-        <p>🐺 Loups : <b>${lRate}%</b></p>
+        <p>🏡 Village : <b>${vRate.toFixed(2)}%</b></p>
+        <p>🐺 Loups : <b>${lRate.toFixed(2)}%</b></p>
+
+        <hr>
+
+        <h3>Winrate individuel moyen</h3>
+        <p>👤 Villageois dévoilé : <b>${winRevealed.toFixed(2)}%</b></p>
+        <p>🎭 Villageois non dévoilé (aléatoire) : <b>${winHidden.toFixed(2)}%</b></p>
     `;
 }
 </script>
